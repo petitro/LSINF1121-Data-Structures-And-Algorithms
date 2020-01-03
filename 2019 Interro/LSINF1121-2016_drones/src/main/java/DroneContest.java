@@ -19,76 +19,68 @@ public class DroneContest {
      */
     public static LinkedList<HeightChange> findHighest(Drone[] participants) {
 
-        //sorting with complexity of N log(N)
-        Drone [] startInc = participants.clone();
-        Collections.shuffle(Arrays.asList(startInc));
-         Arrays.sort(startInc, new Comparator<Drone>() {
+        Drone[] droneStartSort = participants.clone();
+        Arrays.sort(droneStartSort, new Comparator<Drone>() {
             @Override
             public int compare(Drone d1, Drone d2) {
                 return d1.start-d2.start;
             }
         });
 
-        //sorting with hopefully a complexity of N
-        Drone[] endInc =startInc.clone();
-        InsertionSort(endInc);
+        Drone[] droneEndSort = participants.clone();
+        Arrays.sort(droneEndSort, new Comparator<Drone>() {
+            @Override
+            public int compare(Drone d1, Drone d2) {
+                return d1.end-d2.end;
+            }
+        });
 
-        //all the current heights at time t
-        LinkedList<Integer> currentDrone  = new LinkedList<Integer>();
-        currentDrone.add(0);
-        LinkedList<HeightChange> result = new LinkedList<>();
+        TreeMap<Integer, Integer> tree = new TreeMap<Integer, Integer> ();
 
-        int previousHeight = 0;
-        int currentHeight = 0;
+        LinkedList<HeightChange> result = new  LinkedList<HeightChange>();
+        result.add(new HeightChange(0,0)); //in the question drone started at t=1
 
-        int runnerStart = 0;
-        int runnerEnd = 0;
-        while(runnerStart < startInc.length || runnerEnd < endInc.length){
+        int previousHeight = result.get(0).height;
+        int currentHeight;
+        int i = 0; //Runner for droneStartSort
+        int j = 0; //Runner for droneEndSort
 
-            int startTime;
-            int endTime;
-            if (runnerStart < startInc.length) startTime = startInc[runnerStart].start;
-            else startTime = Integer.MAX_VALUE; //needed
-            if (runnerEnd < endInc.length) endTime = endInc[runnerEnd].end;
-            else endTime = Integer.MAX_VALUE;
+        while(i < droneStartSort.length || j < droneEndSort.length){
+            int startTime = Integer.MAX_VALUE;
+            int endTime = Integer.MAX_VALUE;
 
-            //add heights to the list
-            while (startTime <= endTime && (runnerStart < startInc.length && startInc[runnerStart].start == startTime)){
-                currentDrone.add(startInc[runnerStart].height);
-                runnerStart++;
+            if (i < droneStartSort.length) startTime = droneStartSort[i].start;
+            if (j < droneEndSort.length) endTime = droneEndSort[j].end;
+
+            //add new drones in the tree
+            if (startTime <= endTime) {
+                while (i < participants.length && droneStartSort[i].start == startTime) {
+                    //check if height already exist in the tree
+                    Integer count = tree.get(droneStartSort[i].height);
+                    if (count == null) tree.put(droneStartSort[i].height, 1); //doesn't exist
+                    else tree.put(droneStartSort[i].height, count + 1); //exist, so inc
+                    i++;
+                }
             }
 
-            //delete height from the list
-            while (endTime <= startTime && (runnerEnd < endInc.length && endTime == endInc[runnerEnd].end)) {
-                //System.out.println("runnerEnd "+runnerEnd + ", height to remove " + endInc[runnerEnd].height );
-                currentDrone.remove((Integer) endInc[runnerEnd].height);
-                runnerEnd++;
+            //remove drone form the tree
+            if (endTime <= startTime) {
+                while (j < participants.length && endTime == droneEndSort[j].end) {
+                    Integer count = tree.get(droneEndSort[j].height);
+                    if (count.equals(1)) tree.remove(droneEndSort[j].height);
+                    else tree.put(droneEndSort[j].height, count - 1);
+                    j++;
+                }
             }
 
-            //get the maximum height of the list
-            currentHeight= Collections.max(currentDrone);
+            if (!tree.isEmpty()) currentHeight = tree.lastKey();
+            else currentHeight = 0; //case empty so 0 for sure
 
-            //System.out.println("currentHeight " + currentHeight + ", previousHeight " + previousHeight);
             if (currentHeight != previousHeight) {
-                //System.out.println("time "+ Math.min(startTime, endTime)+", height "+ currentHeight);
-                result.add(new HeightChange(Math.min(startTime, endTime), currentHeight));
                 previousHeight = currentHeight;
+                result.add(new HeightChange(Math.min(startTime, endTime), currentHeight));
             }
         }
-        //first point
-        result.addFirst(new HeightChange(0,0));
-        //result.addLast(new HeightChange(endInc[endInc.length-1].end, endInc[endInc.length-1].height));
         return result;
-    }
-
-    private static void InsertionSort(Drone[] a){
-        int N = a.length;
-        for(int i=1; i<N; i++){
-            for (int j=i; j>0 && a[j].end < a[j-1].end; j--){
-                Drone temp = new Drone(a[j].start , a[j].end, a[j].height);
-                a[j]=a[j-1];
-                a[j-1]=temp;
-            }
-        }
     }
 }
